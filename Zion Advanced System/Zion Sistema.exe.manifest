@@ -1076,14 +1076,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Zion Sistema.exe" size="53231616">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Zion Sistema.exe" size="53235712">
       <assemblyIdentity name="Zion Sistema" version="1.0.0.0" language="neutral" processorArchitecture="amd64" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>OGKWr8eKdCrDSRwGC4MChVFsbL/l8slEiszJdzBvjig=</dsig:DigestValue>
+        <dsig:DigestValue>ZSwOWwwblVwyBdj1/tEtfbKAhb9PGczqaP//80d07V8=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
