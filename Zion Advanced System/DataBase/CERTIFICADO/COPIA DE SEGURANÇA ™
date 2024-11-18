@@ -1,0 +1,188 @@
+using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using Newtonsoft.Json.Linq;
+
+public class PixPayment
+{
+    private readonly string _accessToken;
+    private string _paymentId; // Armazena o ID do pagamento
+    private readonly WebhookNotifier _webhookNotifier;
+
+    public PixPayment(string accessToken, string webhookUrl)
+    {
+        _accessToken = accessToken;
+        _webhookNotifier = new WebhookNotifier(webhookUrl);
+    }
+
+    public async Task<string> GerarQrCodeAsync(decimal valor)
+    {
+        using (var client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", "Bearer " + _accessToken);
+            client.DefaultRequestHeaders.Add("X-Idempotency-Key", Guid.NewGuid().ToString());
+
+            // Adiciona o campo "notification_url" com o endpoint do webhook
+            var jsonData = new
+            {
+                transaction_amount = valor,
+                description = "Pagamento via Pix",
+                payment_method_id = "pix",
+                payer = new { email = "rafaelhennig400@gmail.com" },
+                installments = 1,
+                notification_url = "https://discord.com/api/webhooks/1304892403437801493/Rsfw7cxSBYXSrLUelJmLKda_r5Nmft0PVNmMB8s7rPjAAvUefEoao-UcsTSSXJiW6pcs" // Substitua pelo URL do seu webhook
+            };
+
+            var content = new StringContent(JObject.FromObject(jsonData).ToString(), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("https://api.mercadopago.com/v1/payments", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var jsonResponse = JObject.Parse(responseContent);
+
+                _paymentId = jsonResponse["id"]?.ToString();
+
+                // Opcional: Envia uma notificação inicial de criação de pagamento
+                await _webhookNotifier.EnviarNotificacaoAsync("payment.created", _paymentId, "338090442");
+
+                return jsonResponse["point_of_interaction"]["transaction_data"]["qr_code"].ToString();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception("Erro ao gerar QR Code: " + errorContent);
+            }
+        }
+    }
+
+    public async Task<string> CheckPaymentStatusAsync()
+    {
+        if (string.IsNullOrEmpty(_paymentId))
+            throw new Exception("Nenhum pagamento ativo para verificar.");
+
+        using (var client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            var response = await client.GetAsync($"https://api.mercadopago.com/v1/payments/{_paymentId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var json = JObject.Parse(responseContent);
+                string status = json["status"]?.ToString();
+
+                // Notifica status de pagamento atualizado
+                await _webhookNotifier.EnviarNotificacaoAsync("payment.updated", _paymentId, "338090442");
+
+                return status;
+            }
+            else
+            {
+                throw new Exception("Erro ao consultar o status do pagamento: " + response.ReasonPhrase);
+            }
+        }
+    }
+
+    public async Task<bool> CancelarPagamentoAsync()
+    {
+        if (string.IsNullOrEmpty(_paymentId))
+            throw new Exception("Nenhuma transação ativa para cancelar.");
+
+        using (var client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            var jsonData = new { status = "cancelled" };
+            var content = new StringContent(JObject.FromObject(jsonData).ToString(), Encoding.UTF8, "application/json");
+            var response = await client.PutAsync($"https://api.mercadopago.com/v1/payments/{_paymentId}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _paymentId = null; // Limpa o ID do pagamento após o cancelamento
+
+                // Notifica cancelamento de pagamento
+                await _webhookNotifier.EnviarNotificacaoAsync("payment.cancelled", _paymentId, "338090442");
+
+                return true;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception("Erro ao cancelar o pagamento: " + errorContent);
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+private async void GeneratePay()
+        {
+            if (IsMensal == true)
+            {
+                try
+                {
+                    string qrCodeUrl = await pixPayment.GerarQrCodeAsync(80.00m); // Exemplo: 10 reais
+
+                    if (!string.IsNullOrEmpty(qrCodeUrl))
+                    {
+                        using (var qrGenerator = new QRCodeGenerator())
+                        {
+                            QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrCodeUrl, QRCodeGenerator.ECCLevel.Q);
+                            using (var qrCode = new QRCode(qrCodeData))
+                            {
+                                Bitmap qrCodeImage = qrCode.GetGraphic(20);
+                                pictureBox1.Image = qrCodeImage;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Erro: QR Code inválido.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erro ao gerar QR Code: " + ex.Message);
+                }
+            }
+            else
+            {
+                try
+                {
+                    string qrCodeUrl = await pixPayment.GerarQrCodeAsync(530.00m); // Exemplo: 10 reais
+
+                    if (!string.IsNullOrEmpty(qrCodeUrl))
+                    {
+                        using (var qrGenerator = new QRCodeGenerator())
+                        {
+                            QRCodeData qrCodeData = qrGenerator.CreateQrCode(qrCodeUrl, QRCodeGenerator.ECCLevel.Q);
+                            using (var qrCode = new QRCode(qrCodeData))
+                            {
+                                Bitmap qrCodeImage = qrCode.GetGraphic(20);
+                                pictureBox1.Image = qrCodeImage;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Erro: QR Code inválido.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erro ao gerar QR Code: " + ex.Message);
+                }
+            }
+            
+        }

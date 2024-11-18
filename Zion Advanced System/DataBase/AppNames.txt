@@ -1,0 +1,5 @@
+chrome.exe
+Discord.exe
+Spotify.exe
+deven.exe
+explorer.exe

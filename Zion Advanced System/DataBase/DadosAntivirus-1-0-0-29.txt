@@ -1,0 +1,10 @@
+taskkill
+cmd
+goto
+del
+delete
+reg
+add
+System32
+system32
+stop
